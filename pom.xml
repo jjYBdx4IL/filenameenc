@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>filenameenc</groupId>
+    <artifactId>filenameenc</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>exec-create</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <argument>${project.build.directory}/classes</argument>
+                                <argument>filenameenc.Test</argument>
+                                <argument>create</argument>
+                                <argument>${project.build.directory}</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <LC_ALL>de_DE.ISO8859-15@euro</LC_ALL>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>exec-check</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <argument>${project.build.directory}/classes</argument>
+                                <argument>filenameenc.Test</argument>
+                                <argument>check</argument>
+                                <argument>${project.build.directory}</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <LC_ALL>de_DE.UTF-8</LC_ALL>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+                </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>de.mstier</groupId>
+                        <artifactId>shared</artifactId>
+                        <version>1.0-SNAPSHOT</version>
+                        <type>jar</type>
+                    </dependency>
+                </dependencies>
+            </plugin>
+<!--            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>start-mainsite</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <echo>Adjusting jetty port number to ${jetty.port} in ${project.build.directory}/mainsite-distribution/conf/jetty.xml</echo>
+                                <replaceregexp file="${project.build.directory}/mainsite-distribution/etc/jetty.xml"
+                                    match="(Property.*jetty.port.*default=&quot;).*?(&quot;)" replace="\1${jetty.port}\2"
+                                    byline="true" />
+                                <echo>Adjusting smtp port number to ${smtp.port} in ${project.build.directory}/mainsite-distribution/conf/jetty.xml</echo>
+                                <replaceregexp file="${project.build.directory}/mainsite-distribution/etc/jetty.xml"
+                                    match="(Property.*smtp.port.*default=&quot;).*?(&quot;)" replace="\1${smtp.port}\2"
+                                    byline="true" />
+                                <echo>Adjusting imap port number to ${imap.port} in ${project.build.directory}/mainsite-distribution/conf/jetty.xml</echo>
+                                <replaceregexp file="${project.build.directory}/mainsite-distribution/etc/jetty.xml"
+                                    match="(Property.*imap.port.*default=&quot;).*?(&quot;)" replace="\1${imap.port}\2"
+                                    byline="true" />
+                                <echo>Setting devel env in ${project.build.directory}/mainsite-distribution/etc/wrapper.conf</echo>
+                                <replaceregexp file="${project.build.directory}/mainsite-distribution/etc/wrapper.conf"
+                                    match="(=-Dde\\.mstier\\.env=).*" replace="\1devel" byline="true" />
+
+                                 shut down running server - just in case 
+                                <exec executable="./autostart.sh" dir="${project.build.directory}/mainsite-distribution"
+                                    spawn="false">
+                                    <arg value="stop" />
+                                </exec>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <not>
+                                        <socket server="localhost" port="${jetty.port}" />
+                                    </not>
+                                </waitfor>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <not>
+                                        <socket server="localhost" port="${smtp.port}" />
+                                    </not>
+                                </waitfor>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <not>
+                                        <socket server="localhost" port="${imap.port}" />
+                                    </not>
+                                </waitfor>
+
+                                 ensure there is no server still running 
+                                <fail>
+                                    <condition>
+                                        <socket server="localhost" port="${jetty.port}" />
+                                    </condition>
+                                </fail>
+                                <exec executable="./autostart.sh" dir="${project.build.directory}/mainsite-distribution"
+                                    spawn="false">
+                                    <arg value="start" />
+                                </exec>
+                                <echo>Waiting for server to come up at port ${jetty.port}</echo>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <http url="${testUrl}" errorsBeginAt="300" />
+                                </waitfor>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <socket server="localhost" port="${smtp.port}" />
+                                </waitfor>
+                                <waitfor maxwait="3" maxwaitunit="minute" checkevery="1000">
+                                    <socket server="localhost" port="${imap.port}" />
+                                </waitfor>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>shutdown-mainsite</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <exec executable="./autostart.sh" dir="${project.build.directory}/mainsite-distribution"
+                                    spawn="false">
+                                    <arg value="stop" />
+                                </exec>
+                                <apply executable="bzip2">
+                                    <arg value="-9v" />
+                                    <fileset dir="${project.build.directory}/mainsite-distribution/var/log">
+                                        <patternset>
+                                            <include name="*.log" />
+                                        </patternset>
+                                    </fileset>
+                                </apply>
+                                <fail>
+                                    <condition>
+                                        <socket server="localhost" port="${jetty.port}" />
+                                    </condition>
+                                </fail>
+                                <fail>
+                                    <condition>
+                                        <socket server="localhost" port="${smtp.port}" />
+                                    </condition>
+                                </fail>
+                                <fail>
+                                    <condition>
+                                        <socket server="localhost" port="${imap.port}" />
+                                    </condition>
+                                </fail>
+                                </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>-->
+        </plugins>
+    </build>
+
+</project>
